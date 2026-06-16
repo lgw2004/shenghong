@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     minio_secure: bool = False
     minio_region: str = "cn-south-1"
 
+    # Proxy（可选，服务器海外访问用。格式 http://user:pass@host:port 或 socks5://host:port）
+    proxy_server: str = ""
+
     # Crawler
     crawler_delay_seconds: int = 5
     crawler_max_retries: int = 3

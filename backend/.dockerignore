@@ -1,0 +1,36 @@
+# Environment
+.env
+.venv
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Tests
+tests/
+pytest.ini
+
+# Docs (keep README if needed)
+*.md
+
+# Local screenshots
+screenshots/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml

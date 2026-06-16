@@ -1,9 +1,24 @@
 import logging
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_proxy() -> dict | None:
+    """将 PROXY_SERVER 环境变量解析为 Playwright proxy 字典，未配置返回 None"""
+    url = settings.proxy_server.strip()
+    if not url:
+        return None
+    parsed = urlparse(url)
+    proxy = {"server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port or 8080}"}
+    if parsed.username:
+        proxy["username"] = parsed.username
+    if parsed.password:
+        proxy["password"] = parsed.password
+    logger.info("Proxy configured: %s", proxy["server"])
+    return proxy
 
 # 常用浏览器 UA 池
 USER_AGENTS = [
@@ -59,6 +74,9 @@ async def search_amazon(website: str, root_word: str, site_code: str | None = No
             if settings.crawler_browser_channel:
                 launch_args["channel"] = settings.crawler_browser_channel
 
+            proxy = _parse_proxy()
+            if proxy:
+                launch_args["proxy"] = proxy
             browser = await p.chromium.launch(**launch_args)
             locale = _SITE_LOCALE_MAP.get(site_code or "US", _DEFAULT_LOCALE)
             context = await browser.new_context(
@@ -157,10 +175,13 @@ async def take_screenshot(url: str) -> bytes | None:
         from playwright.async_api import async_playwright
 
         async with async_playwright() as p:
-            launch_args = {"headless": False}
+            launch_args = {"headless": True}
             if settings.crawler_browser_channel:
                 launch_args["channel"] = settings.crawler_browser_channel
             launch_args["args"] = ["--no-sandbox", "--start-maximized"]
+            proxy = _parse_proxy()
+            if proxy:
+                launch_args["proxy"] = proxy
             browser = await p.chromium.launch(**launch_args)
             context = await browser.new_context(
                 viewport={"width": 1280, "height": 900},
