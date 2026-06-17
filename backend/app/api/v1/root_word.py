@@ -50,28 +50,6 @@ class LogListResponse(BaseModel):
     items: list[dict]   # 当前页的实际数据
 
 
-# ===========================================================================
-#  接口 1：POST /api/v1/root-word/process
-#  ───────────────────────────────────────
-#  触发一次"搜索→匹配→截图→写日志"的完整流程。
-#
-#  参数（都在 URL 问号后面传，比如 ?limit=5&root_word_ids=1,2,3）：
-#    root_word_ids — 要处理哪些词根 ID，逗号分隔，比如 "1,2,3"
-#                    不传则自动取"最近更新的 N 条"
-#    limit         — 最多处理几条，默认 10，范围 1~100
-#
-#  返回示例：
-#    {
-#      "total": 3,
-#      "matched": 2,
-#      "unmatched": 1,
-#      "results": [
-#        { "root_word_id": 1, "root_word_type": "0", "check_remark": "http://minio/..." },
-#        { "root_word_id": 2, "root_word_type": "0", "check_remark": "http://minio/..." },
-#        { "root_word_id": 3, "root_word_type": "1", "check_remark": "http://minio/..." }
-#      ]
-#    }
-# ===========================================================================
 @router.post("/process", response_model=ProcessResponse)
 async def trigger_process(
     # ---- 参数定义 ----
@@ -131,10 +109,6 @@ async def trigger_process(
 #    root_word_type — "0"=匹配上的, "1"=没匹配的
 #    limit          — 每页多少条，默认 50，范围 1~500
 #    offset         — 跳过多少条（翻页用，offset=50 表示从第 51 条开始）
-#
-#  示例：
-#    GET /api/v1/root-word/logs?root_word_type=0&limit=20
-#    含义：只看"匹配上"的日志，每次 20 条，从第 1 条开始
 # ===========================================================================
 @router.get("/logs", response_model=LogListResponse)
 async def list_logs(
@@ -154,6 +128,10 @@ async def list_logs(
     site_name: Optional[str] = Query(
         None,
         description="按站点中文名模糊搜索（如 美国）",
+    ),
+    sort: Optional[str] = Query(
+        "desc",
+        description="时间排序：desc=倒序（最新在前）, asc=正序（最早在前）",
     ),
     root_word_type: Optional[str] = Query(
         None,
@@ -210,11 +188,15 @@ async def list_logs(
     total = (await db.execute(count_stmt)).scalar() or 0
 
     # ---- 查当前页的数据 ----
+    order_clause = (
+        RootWordCheckLog.uptime.asc() if sort == "asc"
+        else RootWordCheckLog.uptime.desc()
+    )
     stmt = (
         select(RootWordCheckLog, RootWordCheck.site_name)
         .select_from(RootWordCheckLog)
         .join(RootWordCheck, RootWordCheckLog.root_word_id == RootWordCheck.root_word_id, isouter=True)
-        .order_by(RootWordCheckLog.uptime.desc())
+        .order_by(order_clause)
     )
     if conditions:
         stmt = stmt.where(*conditions)

@@ -26,7 +26,11 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="load">查询</el-button>
-          <el-button @click="filters = { root_word_id: '', root_word: '', website: '', site_name: '', root_word_type: '' }; load()">重置</el-button>
+          <el-button @click="filters = { root_word_id: '', root_word: '', website: '', site_name: '', root_word_type: '', sort: 'desc' }; load()">重置</el-button>
+          <el-button text @click="toggleSort" style="margin-left: 8px">
+            <el-icon><Sort /></el-icon>
+            {{ filters.sort === 'desc' ? '最新在前' : '最早在前' }}
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -73,13 +77,19 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { Sort } from '@element-plus/icons-vue'
 import { fetchLogs } from '../api'
 
 const loading = ref(false)
 const tableData = ref([])
 const total = ref(0)
-const filters = ref({ root_word_id: '', root_word: '', website: '', site_name: '', root_word_type: '' })
+const filters = ref({ root_word_id: '', root_word: '', website: '', site_name: '', root_word_type: '', sort: 'desc' })
 const pagination = ref({ page: 1, size: 20 })
+
+function toggleSort() {
+  filters.value.sort = filters.value.sort === 'desc' ? 'asc' : 'desc'
+  load()
+}
 
 async function load() {
   loading.value = true
@@ -87,6 +97,7 @@ async function load() {
     const params = {
       limit: pagination.value.size,
       offset: (pagination.value.page - 1) * pagination.value.size,
+      sort: filters.value.sort,
     }
     if (filters.value.root_word_id) params.root_word_id = Number(filters.value.root_word_id)
     if (filters.value.root_word) params.root_word = filters.value.root_word

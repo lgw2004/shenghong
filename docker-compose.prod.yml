@@ -1,0 +1,70 @@
+services:
+  # ─── PostgreSQL 数据库 ─────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: rootword
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-rootword2026}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/scripts/sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d rootword"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── FastAPI 后端 ────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://app:${DB_PASSWORD:-rootword2026}@postgres:5432/rootword
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-121.43.60.72:9010}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=${MINIO_BUCKET:-dev-sherp}
+      - MINIO_SECURE=${MINIO_SECURE:-false}
+      - MINIO_REGION=${MINIO_REGION:-cn-south-1}
+      - PROXY_SERVER=${PROXY_SERVER}
+      - PROXY_MAP=${PROXY_MAP}
+      - CRAWLER_DELAY_SECONDS=${CRAWLER_DELAY_SECONDS:-1}
+      - CRAWLER_CONCURRENCY=${CRAWLER_CONCURRENCY:-3}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Nginx 前端 ──────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ─── Xray 代理（可选：欧洲站需要时启动）──────────────
+  xray:
+    image: xtls/xray-core:latest
+    container_name: xray
+    volumes:
+      - ./backend/xray/config.json:/etc/xray/config.json:ro
+    restart: unless-stopped
+    profiles: ["proxy"]
+
+volumes:
+  pgdata:

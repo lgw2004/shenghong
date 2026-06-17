@@ -23,12 +23,13 @@ export function fetchSources({ limit = 20, offset = 0 } = {}) {
 }
 
 // ---------- 执行日志（root_word_check_log）----------
-export function fetchLogs({ root_word_id, root_word, website, site_name, root_word_type, limit = 20, offset = 0 } = {}) {
+export function fetchLogs({ root_word_id, root_word, website, site_name, root_word_type, sort, limit = 20, offset = 0 } = {}) {
   const params = { limit, offset }
   if (root_word_id) params.root_word_id = root_word_id
   if (root_word) params.root_word = root_word
   if (website) params.website = website
   if (site_name) params.site_name = site_name
+  if (sort) params.sort = sort
   if (root_word_type !== '' && root_word_type !== null && root_word_type !== undefined) {
     params.root_word_type = root_word_type
   }

@@ -116,7 +116,7 @@ async def search_amazon(website: str, root_word: str, site_code: str | None = No
     """
     在 Amazon 站点搜索 root_word，返回商品列表。
 
-    使用 Playwright 浏览器加载页面并自适应提取（不依赖 CSS 选择器）。
+    使用 Playwright 浏览器加载页面并自适应提取。
 
     Returns:
         [{asin, title, url}, ...]
