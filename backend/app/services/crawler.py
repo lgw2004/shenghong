@@ -253,6 +253,19 @@ async def crawl_amazon(
             # ── Step 1: 搜索 ──
             await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
             await page.wait_for_timeout(2000)
+
+            # 自动接受 Cookie 弹窗（不同国家语言不同，但选择器通用）
+            try:
+                cookie_btn = page.locator(
+                    '#sp-cc-accept, [data-action="sp-cc-accept-all"], input[name="accept"], #sp-cc-accepta-button-input'
+                )
+                if await cookie_btn.count() > 0:
+                    await cookie_btn.first.click(timeout=3000)
+                    logger.info("Cookie banner dismissed")
+                    await page.wait_for_timeout(800)
+            except Exception:
+                pass  # 没有弹窗就继续
+
             search_results = await page.evaluate(_EXTRACT_SEARCH_RESULTS_JS)
             logger.info("Search returned %d results", len(search_results))
 
