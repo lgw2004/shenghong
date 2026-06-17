@@ -1,0 +1,27 @@
+services:
+  # ─── Xray 代理 ───────────────────────────────────────
+  xray:
+    image: xtls/xray-core:latest
+    container_name: xray
+    volumes:
+      - ./backend/xray/config.json:/etc/xray/config.json:ro
+    restart: unless-stopped
+
+  # ─── FastAPI 后端 ────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-121.43.60.72:9010}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-aIR9gFFJCYfEaPHRoe2l}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-pOxN2QjaniBJcqeuPSd2BEVpRk0sluPbJ316wI1R}
+      - MINIO_BUCKET=${MINIO_BUCKET:-dev-sherp}
+      - MINIO_REGION=${MINIO_REGION:-cn-south-1}
+      - PROXY_SERVER=socks5://xray:10808
+      - CRAWLER_DELAY_SECONDS=${CRAWLER_DELAY_SECONDS:-5}
+    depends_on:
+      - xray
+    restart: unless-stopped
